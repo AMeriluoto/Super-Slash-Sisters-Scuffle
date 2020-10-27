@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width">
+	<title>Super Slash Sisters Scuffle</title>
+	<link href="style.css" rel="stylesheet" type="text/css" />
+	<style>
+    body {
+      background-color: red;
+      font-family: "Arial";
+      color: gray;
+    }
+		.title {
+			font-size: 6vw;
+			color: gray;
+			font-family: "Arial Black", Gadget, sans-serif;
+			text-align: center;
+		}
+
+		#canvas {
+			border: solid black .5vw;
+			background-color: grey;
+			display: initial;
+		}
+	</style>
+</head>
+
+<body>
+
+	<div class="title">
+		<p>Super Slash Sisters Scuffle</p>
+	</div>
+  <center><audio controls loop>
+  <source src="brawl.mp3" type="audio/mpeg">
+  Your browser does not support the audio element.
+</audio></center>
+
+	<center><canvas id="canvas"></canvas></center>
+  <center><p>Controls</p></center>
+  <center><p>Action | Player 1 | Player 2</p>
+  <p>Movement |W,A,D|Arrow Keys</p>
+  <p>Punch |V |P</p>
+  <p>Kick |C|O</p>
+  <p>To reset the game, press "Enter"</p>
+</center>
+
+
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="script.js"></script>
+	<script>
+    var fps = 60;
+		var canvas_x = 1000;
+    var canvas_y = 500;
+    var player1_x = 0;
+    var player1_y = 0;
+    var player1_x_speed = 0;
+    var player1_y_speed = 0;
+    var player2_x = 0;
+    var player2_y = 0;
+    var player2_x_speed = 0;
+    var player2_y_speed = 0;
+    var speed_mult2 = -4;
+    var speed_mult1 = 4;    
+    var frameCount = 0;
+    var intervalID = null;
+    var isPunching1 = false;
+    var isKicking1 = false;
+    var isJumping1 = false;
+    var peakJump1 = false;
+    var peakCount1 = 0;
+    var jumpCount1 = 100;
+    var kickCount1 = 0;
+    var punchCount1 = 0;
+    var isJumping2 = false;
+    var peakJump2 = false;
+    var peakCount2 = 0;
+    var jumpCount2 = 100;
+    var isPunching2 = false;
+    var isKicking2 = false;
+    var isPlaying = false;
+    var hasCrossed = false;
+    var punchStop = 0;
+    var punchStop = 0;
+    var kickStop1 = 0;
+    var kickStop2 = 0;
+    var kickCD2 = 0;
+    var moveCD1 = 0;
+    var moveCD2 = 0;
+    var punchCD1 = 0;
+    var punchCD2 = 0;
+    var kickCD1 = 0;
+    var health1 = 100;
+    var health2 = 100;
+    var keys = [];
+    var score1 = 0;
+    var score2 = 0;
+    var brawl = new Audio("brawl.mp3");
+    var punchClip1 = new Audio("punch.mp3");
+    var punchClip2 = new Audio("punch.mp3");
+    var kickClip1 = new Audio("kick.mp3");
+    var kickClip2 = new Audio("kick.mp3");
+
+    canvas.width = canvas_x;
+    canvas.height = canvas_y;
+    var context = $('#canvas')[0];
+    var gameboard = context.getContext('2d');
+    var startGame = setInterval(game,1000/fps);
+    var gameOver = false;
+
+
+/*
+  $("body").on("keydown",input);
+  $("body").on("keyup",stop_player);
+*/
+ window.addEventListener('keydown', function (e) {
+            
+            if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
+          e.preventDefault();
+            }
+            keys = (keys || []);
+            keys[e.keyCode] = true;
+            input();
+
+        });
+  window.addEventListener('keyup', function (e) {
+            keys[e.keyCode] = false;  
+            stop_player();
+        });
+
+  function input(){
+        if(gameOver&&keys[13]){
+          create();
+          startGame = setInterval(game,1000/fps);
+        }
+        if(keys[68]&&!keys[87]){
+          player1_x_speed = 1; 
+         
+        }
+        if(keys[68]&&keys[87]){
+          player1_x_speed = 1;
+          peakCount1 = 0;
+          jumpCount1 = 100;
+          isJumping1 = true;
+        }
+        if(keys[65]&&!keys[87]){
+          player1_x_speed = -1;
+        }
+        if(keys[65]&&keys[87]){
+          player1_x_speed = -1;
+          peakCount1 = 0;
+          jumpCount1 = 100;
+          isJumping1 = true;
+        }
+        if(keys[87]){
+          peakCount1 = 0;
+          jumpCount1 = 100;
+          isJumping1 = true;
+        }
+        if(keys[86]&&!keys[67]&&moveCD1 ==0&&punchCD1>=15){
+          punchCount1 = 0;
+          isPunching1 = true;
+          moveCD1 = 1;    
+          punchCD1 = 0;
+          punchStop1 = 0;
+        }
+        if(keys[67]&&!keys[86] && moveCD1 ==0&&kickCD1>=30){
+          kickCount1 = 0;
+          kickCD1 = 0;
+          isKicking1 = true;
+          kickStop1 = 0;
+          moveCD1 = 1;
+        }
+
+        if(keys[37]&&!keys[38]){
+          player2_x_speed = 1;
+        }
+
+        if(keys[39]&&!keys[38]){
+          player2_x_speed = -1;
+        }
+
+        if(keys[37]&&keys[38]){
+          player2_x_speed = 1;
+          peakCount2 = 0;
+          jumpCount2 = 100;
+          isJumping2 = true;
+        }
+
+        if(keys[39]&&keys[38]){
+          player2_x_speed = -1;
+          peakCount2 = 0;
+          jumpCount2 = 100;
+          isJumping2 = true;
+        }
+        if(keys[38]){
+          isJumping2 = true;
+          peakCount2 = 0;
+        }
+        if(keys[80]&&!keys[79]&&moveCD2 == 0&&punchCD2>=15){
+          punchCount2 = 0;    
+          isPunching2 = true;
+          punchStop2 = 0;
+          punchCD2 = 0;
+          moveCD2 = 1;
+        }
+        if(keys[79]&&!keys[80]&&moveCD2 ==0&&kickCD2>=30){
+          kickCount2 = 0;
+          isKicking2 = true;
+          kickCD2 = 0;
+          kickStop2 = 0;
+          moveCD2 = 1;
+        }
+
+
+        
+      }
+      function health_score_system(){
+    if(health1 <=0){
+        health1 = 100
+        health2 = 100;
+        player1_x = 0;
+        player2_x = 0;
+        score2++;
+      }
+      
+      if(health2 <=0){
+        health1 = 100
+        health2 = 100;
+        player1_x = 0;
+        player2_x = 0;
+        score1++;
+      }
+      gameboard.fillStyle = "red";
+      gameboard.fillRect(50,40,health1*2,20);
+      gameboard.fillRect(780,40,health2*2,20);
+      gameboard.fillStyle = "white";
+      gameboard.fillText(score1,50,100);
+      gameboard.fillText(score2,955,100);
+      if(score1>=3){
+        gameboard.fillText("Moria Wins",400,250);
+        clearInterval(startGame);
+        gameOver = true;
+      }
+      if(score2>=3){
+        gameboard.fillText("Luge Wins",400,250);
+        clearInterval(startGame);
+        gameOver = true;
+
+      }
+  }
+
+  function stop_player(){
+    if(!keys[65]&&!keys[68]){
+        player1_x_speed = 0;
+
+    }
+    if(!keys[37]&&!keys[39])   {
+    player2_x_speed = 0;
+    }
+    if(!keys[86]&&!keys[67]){
+      moveCD1 = 0;
+    }
+    if(!keys[79]&&!keys[80]){
+      moveCD2 = 0;
+    }
+  }      
+
+/*
+  function punch(){
+    frameCount+=1;
+    gameboard.clearRect(0,0,canvas_x,canvas_y);
+    gameboard.fillRect(player_x+50,player_y+30,40,20);
+    if(frameCount/60 = 0.5 ){
+      clearInterval(intervalID);
+    }
+  
+  }
+  */
+
+  function walking(){
+    if(player1_x+50>player2_x+950){
+      hasCrossed = true;
+    }
+    else{
+      hasCrossed = false;
+    }
+    if(!isPunching1&&!isKicking1){
+        if(player1_x_speed !=0&&frameCount<=5&&!isJumping1&&!hasCrossed){
+          defaultFrame_1();
+        }
+        else if(!hasCrossed){
+        walkFrame_1();
+        }
+        else if(hasCrossed&&player1_x_speed!=0&&frameCount<=5&&!isJumping1){
+          defaultSwitch_1();
+        }
+        else{
+          walkSwitch_1();
+        }
+      }
+      if(!isPunching2&&!isKicking2){
+        if(player2_x_speed !=0&&frameCount<=5&&!isJumping2){
+          defaultFrame_2();
+        }
+        else{
+        walkFrame_2();
+        }
+      }
+  }
+   
+  function punching(){
+    if(isPunching1&&!isKicking1){
+        punch_1();
+
+        punchCount1++;
+        if(player1_x+110>=player2_x+925 && player1_x+110<=player2_x+1000&&punchStop1==0){
+          punchStop1+=1;
+          if(player1_y+360<=player2_y+500&&player1_y+360>=player2_y+295){
+            health2-=10;
+                    punchClip1.play();
+
+          }
+        }
+        if(punchCount1/fps == 0.2){
+          isPunching1 = false;
+        }
+      }
+      if(isPunching2&&!isKicking2){
+        punch_2();
+        punchCount2++;
+        if(player2_x+890<=player1_x+65 && player2_x+890>=player1_x+15&&punchStop2==0){
+          punchStop2+=1;
+          if(player2_y+360<=player2_y+500&&player1_y+360>=player2_y+295){
+            health1-=10;
+            punchClip2.play();
+
+          }
+        }
+      if(punchCount2/fps == 0.2){
+          isPunching2 = false;
+
+        }
+      }
+  }
+  function kicking(){
+    if(isKicking1&&!isPunching1){
+        kick_1();
+        kickCount1++;
+        if(player1_x+140>=player2_x+925 && player1_x+140<=player2_x+1000&&kickStop1==0){
+          kickStop1+=1;
+          if(player1_y+420<=player2_y+500&&player1_y+420>=player2_y+295){
+            health2-=15;
+            kickClip1.play();
+          }
+        }
+        if(kickCount1/fps == 0.4){
+
+          isKicking1 = false;
+        }
+      }
+      if(isKicking2&&!isPunching2){
+        kick_2();
+        kickCount2++;
+        if(player2_x+860>=player1_x+15 && player2_x+860<=player1_x+65&&kickStop2==0){
+          kickStop2+=1;
+          if(player2_y+420<=player1_y+500&&player2_y+420>=player1_y+295){
+            health1-=15;
+            kickClip2.play();
+          }
+        }
+        if(kickCount2/fps == 0.4){
+
+          isKicking2 = false;
+        }
+      }
+  }
+
+  function game(){
+    /*
+    if(brawl.duration>0){
+      isPlaying = true;
+    }
+    else{
+      isPlaying = false;
+    }
+    if(!isPlaying){
+      brawl.play();
+    }
+    */
+    gameboard.font = "50px Tahoma";
+    frameCount++;
+    if(!keys[67]){
+      kickCD1++;
+    }
+    if(!keys[86]){
+      punchCD1++;
+    }
+
+    if(!keys[79]){
+      kickCD2++;
+    }
+    if(!keys[80]){
+      punchCD2++;
+    }
+    if(frameCount>10){
+      frameCount=0;
+    }
+      gameboard.clearRect(0,0,canvas_x,canvas_y);
+      gameboard.fillStyle = "red";
+      player1_x+=player1_x_speed*speed_mult1;
+      player1_y+=player1_y_speed*speed_mult1;
+      player2_x+=player2_x_speed*speed_mult2;
+      player2_y+=player2_y_speed*speed_mult1;
+      if(player1_x<=0){
+        player1_x=0;
+      }
+      if(player1_x+65>=1000){
+        player1_x=935;
+      }
+      /*
+      if(player1_x + 65>player2_x+935){
+        var temp = player2_x;
+        player2_x = player1_x+
+      }
+      */
+      if(player2_x<=-950){
+        player2_x=-950;
+      }
+      if(player1_x+950)
+      if(player2_x+950>=950){
+        player2_x = 0;
+      }
+      
+      walking();
+      punching();
+      kicking();
+      if(isKicking1&&isPunching1){
+        isKicking1 = false;
+        isPunching1 = false;
+      }
+      if(isKicking2&&isPunching2){
+        isKicking2 = false;
+        isPunching2 = false;
+      }
+
+
+      if(isJumping1){  
+        if(player1_y>-150 && !peakJump1){
+          jumpCount1++;
+          player1_y_speed = -2;
+        }
+        else if (player1_y<=-150){
+          jumpCount1--;
+          peakJump1 = true;
+          player1_y_speed = 2;
+        }
+        else if(player1_y>=0){
+          player1_y = 0;
+          player1_y_speed = 0;
+          peakJump1 = false;
+          isJumping1 = false;
+        }
+      }
+        if(isJumping2){  
+        if(player2_y>-150 && !peakJump2){
+          jumpCount2++;
+          player2_y_speed = -2;
+        }
+        else if (player2_y<=-150){
+          jumpCount2--;
+          peakJump2 = true;
+          player2_y_speed = 2;
+        }
+        else if(player2_y>=0){
+          player2_y = 0;
+          player2_y_speed = 0;
+          peakJump2 = false;
+          isJumping2 = false;
+        }
+      }
+
+     health_score_system();
+
+
+
+
+
+
+    }
+
+	</script>
+</body>
+</html>
